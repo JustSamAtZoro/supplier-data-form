@@ -1,94 +1,101 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { TAXONOMY } from '../lib/taxonomy'
+import { getL0Options, getL1Options, getL2Options, getL3Options } from '../lib/taxonomy'
 
 export const useFormStore = defineStore('form', () => {
   const formData = ref<Record<string, any>>({
-    primaryCategory: 'Safety',
-    subcategory: 'Gloves'
+    l0Category: '',
+    l1Category: '',
+    l2Category: '',
+    l3Category: ''
   })
   
-  const multiSkuMode = ref(false)
-  const skuForms = ref<Record<string, any>[]>([{}])
+  // L0 options (always available)
+  const l0Options = computed(() => getL0Options())
   
-  const currentCategory = computed(() => formData.value.primaryCategory)
-  const currentSubcategory = computed(() => formData.value.subcategory)
+  // L1 options (available after L0 selection)
+  const l1Options = computed(() => {
+    if (!formData.value.l0Category) return {}
+    return getL1Options(formData.value.l0Category)
+  })
   
-  const subcategoryOptions = computed(() => {
-    const category = TAXONOMY[currentCategory.value]
-    if (!category) return []
-    return Object.keys(category.subcategories)
+  // L2 options (available after L1 selection)
+  const l2Options = computed(() => {
+    if (!formData.value.l0Category || !formData.value.l1Category) return {}
+    return getL2Options(formData.value.l0Category, formData.value.l1Category)
+  })
+  
+  // L3 options (available after L2 selection)
+  const l3Options = computed(() => {
+    if (!formData.value.l0Category || !formData.value.l1Category || !formData.value.l2Category) return {}
+    return getL3Options(formData.value.l0Category, formData.value.l1Category, formData.value.l2Category)
+  })
+  
+  // Check if form is complete (all dropdowns selected)
+  const isFormComplete = computed(() => {
+    return formData.value.l0Category && 
+           formData.value.l1Category && 
+           formData.value.l2Category && 
+           formData.value.l3Category
   })
   
   function updateField(key: string, value: any) {
     formData.value[key] = value
     
+    // Handle cascading logic - clear lower level selections when higher level changes
+    if (key === 'l0Category') {
+      formData.value.l1Category = ''
+      formData.value.l2Category = ''
+      formData.value.l3Category = ''
+    } else if (key === 'l1Category') {
+      formData.value.l2Category = ''
+      formData.value.l3Category = ''
+    } else if (key === 'l2Category') {
+      formData.value.l3Category = ''
+    }
+    
     // Auto-save to localStorage
     localStorage.setItem('supplier-form-data', JSON.stringify(formData.value))
   }
   
-  function updateSkuForm(index: number, key: string, value: any) {
-    if (!skuForms.value[index]) {
-      skuForms.value[index] = {}
-    }
-    skuForms.value[index][key] = value
-    
-    // Auto-save to localStorage
-    localStorage.setItem('supplier-form-sku-data', JSON.stringify(skuForms.value))
-  }
-  
-  function addSkuForm() {
-    skuForms.value.push({})
-  }
-  
-  function removeSkuForm(index: number) {
-    if (skuForms.value.length > 1) {
-      skuForms.value.splice(index, 1)
-      localStorage.setItem('supplier-form-sku-data', JSON.stringify(skuForms.value))
-    }
-  }
-  
   function clearForm() {
     formData.value = {
-      primaryCategory: 'Safety',
-      subcategory: 'Gloves'
+      l0Category: '',
+      l1Category: '',
+      l2Category: '',
+      l3Category: ''
     }
-    skuForms.value = [{}]
     localStorage.removeItem('supplier-form-data')
-    localStorage.removeItem('supplier-form-sku-data')
   }
   
   function loadFromStorage() {
     const saved = localStorage.getItem('supplier-form-data')
     if (saved) {
       try {
-        formData.value = { ...formData.value, ...JSON.parse(saved) }
+        const savedData = JSON.parse(saved)
+        // Only load valid data structure
+        if (typeof savedData === 'object' && savedData !== null) {
+          formData.value = { 
+            l0Category: savedData.l0Category || '',
+            l1Category: savedData.l1Category || '',
+            l2Category: savedData.l2Category || '',
+            l3Category: savedData.l3Category || ''
+          }
+        }
       } catch (e) {
         console.error('Failed to load form data from storage')
-      }
-    }
-    
-    const savedSku = localStorage.getItem('supplier-form-sku-data')
-    if (savedSku) {
-      try {
-        skuForms.value = JSON.parse(savedSku)
-      } catch (e) {
-        console.error('Failed to load SKU data from storage')
       }
     }
   }
   
   return {
     formData,
-    multiSkuMode,
-    skuForms,
-    currentCategory,
-    currentSubcategory,
-    subcategoryOptions,
+    l0Options,
+    l1Options,
+    l2Options,
+    l3Options,
+    isFormComplete,
     updateField,
-    updateSkuForm,
-    addSkuForm,
-    removeSkuForm,
     clearForm,
     loadFromStorage
   }

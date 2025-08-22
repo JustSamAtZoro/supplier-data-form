@@ -1,104 +1,177 @@
-export type FieldType = 'text'|'textarea'|'number'|'select'|'multiselect'|'boolean'|'url'|'file'
-export type ShowIf = { key: string; equals: string | string[] }
-export type Attribute = {
-  key: string
-  label: string
-  type: FieldType
-  required?: boolean
-  unit?: string
-  options?: string[]
-  showIf?: ShowIf
-  helpText?: string
+// Simplified taxonomy structure for cascading dropdowns
+export type CategoryLevel = {
+  name: string
+  children?: Record<string, CategoryLevel>
 }
-export type Subcategory = { name: string; attributes: Attribute[]; compliance?: Attribute[] }
-export type Category = { name: string; subcategories: Record<string, Subcategory> }
-export type Taxonomy = Record<string, Category>
 
-export const CORE: Attribute[] = [
-  { key: 'brand', label: 'Brand', type: 'text', required: true, helpText: 'Manufacturer or brand name' },
-  { key: 'mpn', label: 'Manufacturer Part Number (MPN)', type: 'text', required: true, helpText: 'Unique identifier from manufacturer' },
-  { key: 'name', label: 'Product Name', type: 'text', required: true, helpText: 'Descriptive product name' },
-  { key: 'shortDescription', label: 'Short Description', type: 'textarea', required: true, helpText: 'Brief product description (max 200 characters)' },
-  { key: 'longDescription', label: 'Long Description', type: 'textarea', required: true, helpText: 'Detailed product description' },
-  { key: 'gtin', label: 'GTIN/UPC', type: 'text', required: true, helpText: '8-14 digit product identifier' },
-  { key: 'countryOfOrigin', label: 'Country of Origin', type: 'text', required: true, helpText: 'Country where product is manufactured' },
-  { key: 'unspsc', label: 'UNSPSC', type: 'text', helpText: 'United Nations Standard Products and Services Code' },
-  { key: 'keywords', label: 'Keywords/Meta', type: 'textarea', helpText: 'Search terms and metadata' },
-  { key: 'lifecycle', label: 'Lifecycle Status', type: 'select', options: ['Active', 'Obsolete'] },
-  { key: 'warranty', label: 'Warranty', type: 'textarea', helpText: 'Warranty terms and conditions' },
-  { key: 'hazmat', label: 'Hazmat', type: 'boolean', helpText: 'Is this a hazardous material?' },
-  { key: 'shipsAlone', label: 'Ships Alone', type: 'boolean', helpText: 'Can this item ship without other items?' },
-  { key: 'assemblyRequired', label: 'Assembly Required', type: 'boolean', helpText: 'Does this item require assembly?' },
-]
+export type Taxonomy = Record<string, CategoryLevel>
 
-export const SHARED_DIM_PACK: Attribute[] = [
-  { key: 'uom', label: 'Unit of Measure', type: 'select', options: ['EA', 'PR', 'BX', 'CS'] },
-  { key: 'height', label: 'Item Height', type: 'number', unit: 'in' },
-  { key: 'width', label: 'Item Width', type: 'number', unit: 'in' },
-  { key: 'depth', label: 'Item Depth', type: 'number', unit: 'in' },
-  { key: 'weight', label: 'Item Weight', type: 'number', unit: 'lb' },
-  { key: 'casePack', label: 'Case Pack', type: 'number' },
-  { key: 'caseWeight', label: 'Case Weight', type: 'number', unit: 'lb' },
-  { key: 'palletQty', label: 'Pallet Qty', type: 'number' },
-]
-
+// Mock taxonomy data with L0 -> L1 -> L2 -> L3 hierarchy
 export const TAXONOMY: Taxonomy = {
-  Safety: {
-    name: 'Safety (PPE)',
-    subcategories: {
-      Gloves: {
-        name: 'Hand Protection (Gloves)',
-        attributes: [
-          { key: 'gloveType', label: 'Glove Type', type: 'select', required: true, options: ['Disposable', 'General Purpose', 'Cut-Resistant', 'Chemical-Resistant', 'Heat-Resistant'] },
-          { key: 'material', label: 'Material', type: 'select', options: ['Nitrile', 'Latex', 'Neoprene', 'HPPE', 'Leather', 'Cotton'] },
-          { key: 'coating', label: 'Coating', type: 'select', options: ['None', 'Nitrile', 'Polyurethane', 'Latex'] },
-          { key: 'cuff', label: 'Cuff Style', type: 'text' },
-          { key: 'size', label: 'Size', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'] },
-          { key: 'color', label: 'Color', type: 'text' },
-          { key: 'length', label: 'Length', type: 'number', unit: 'in' },
-          { key: 'thickness', label: 'Thickness', type: 'number', unit: 'mil', showIf: { key: 'gloveType', equals: 'Disposable' } },
-          { key: 'ansiCut', label: 'ANSI Cut Level', type: 'select', options: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9'], showIf: { key: 'gloveType', equals: 'Cut-Resistant' } },
-          { key: 'en388', label: 'EN388', type: 'text' },
-          { key: 'powdered', label: 'Powdered', type: 'boolean' },
-          { key: 'boxQty', label: 'Box/Case Qty', type: 'number' },
-        ],
-        compliance: [
-          { key: 'meets', label: 'Meets Standards', type: 'multiselect', options: ['ANSI/ISEA 105', 'EN 388'] },
-          { key: 'certs', label: 'Certifications', type: 'textarea' },
-        ],
+  // L0 Categories (Primary High-Level Categories)
+  safety: {
+    name: 'Safety & Protection',
+    children: {
+      // L1 Subcategories
+      ppe: {
+        name: 'Personal Protective Equipment',
+        children: {
+          // L2 Subcategories
+          head: {
+            name: 'Head Protection',
+            children: {
+              // L3 End Nodes
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          },
+          eye: {
+            name: 'Eye Protection',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          },
+          hand: {
+            name: 'Hand Protection',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          }
+        }
       },
-    },
+      emergency: {
+        name: 'Emergency Equipment',
+        children: {
+          'fire-safety': {
+            name: 'Fire Safety',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          },
+          'first-aid': {
+            name: 'First Aid',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          }
+        }
+      }
+    }
   },
-  'Janitorial & Cleaning': {
-    name: 'Janitorial & Cleaning',
-    subcategories: {
-      Disinfectants: {
-        name: 'Disinfectants',
-        attributes: [
-          { key: 'form', label: 'Form', type: 'select', options: ['Concentrate', 'Ready-to-Use', 'Wipe'], required: true },
-          { key: 'active', label: 'Active Ingredient(s)', type: 'text' },
-          { key: 'dilution', label: 'Dilution Ratio', type: 'text', showIf: { key: 'form', equals: 'Concentrate' } },
-          { key: 'scent', label: 'Scent', type: 'text' },
-          { key: 'ph', label: 'pH', type: 'number' },
-          { key: 'surface', label: 'Surface Compatibility', type: 'text' },
-          { key: 'containerType', label: 'Container Type', type: 'select', options: ['Bottle', 'Jug', 'Drum', 'Wipes Canister'] },
-          { key: 'containerSize', label: 'Container Size', type: 'text' },
-          { key: 'casePack', label: 'Case Pack', type: 'number' },
-          { key: 'contactTime', label: 'Contact Time', type: 'number', unit: 'min' },
-        ],
-        compliance: [
-          { key: 'epa', label: 'EPA Registration Number', type: 'text', required: true },
-          { key: 'meets', label: 'Meets Standards', type: 'multiselect', options: ['EPA List N', 'VOC-compliant'] },
-          { key: 'sds', label: 'SDS URL', type: 'url' },
-        ],
+  tools: {
+    name: 'Tools & Equipment',
+    children: {
+      'hand-tools': {
+        name: 'Hand Tools',
+        children: {
+          cutting: {
+            name: 'Cutting Tools',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          },
+          measuring: {
+            name: 'Measuring Tools',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          }
+        }
       },
-    },
+      'power-tools': {
+        name: 'Power Tools',
+        children: {
+          drilling: {
+            name: 'Drilling & Driving',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          },
+          cutting: {
+            name: 'Cutting & Grinding',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          }
+        }
+      }
+    }
   },
+  maintenance: {
+    name: 'Maintenance & Cleaning',
+    children: {
+      janitorial: {
+        name: 'Janitorial Supplies',
+        children: {
+          chemicals: {
+            name: 'Cleaning Chemicals',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          },
+          equipment: {
+            name: 'Cleaning Equipment',
+            children: {
+              'successful-upload': { name: 'Successful Upload' },
+              'failed-upload': { name: 'Failed Upload' }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
-// Helper function to get subcategory options for a category
-export function getSubcategoryOptions(categoryKey: string): string[] {
-  const category = TAXONOMY[categoryKey]
-  if (!category) return []
-  return Object.keys(category.subcategories)
+// Helper function to get L0 options
+export function getL0Options(): Record<string, string> {
+  const options: Record<string, string> = {}
+  for (const [key, category] of Object.entries(TAXONOMY)) {
+    options[key] = category.name
+  }
+  return options
+}
+
+// Helper function to get L1 options given L0
+export function getL1Options(l0Key: string): Record<string, string> {
+  const category = TAXONOMY[l0Key]
+  if (!category?.children) return {}
+  
+  const options: Record<string, string> = {}
+  for (const [key, subcategory] of Object.entries(category.children)) {
+    options[key] = subcategory.name
+  }
+  return options
+}
+
+// Helper function to get L2 options given L0 and L1
+export function getL2Options(l0Key: string, l1Key: string): Record<string, string> {
+  const category = TAXONOMY[l0Key]?.children?.[l1Key]
+  if (!category?.children) return {}
+  
+  const options: Record<string, string> = {}
+  for (const [key, subcategory] of Object.entries(category.children)) {
+    options[key] = subcategory.name
+  }
+  return options
+}
+
+// Helper function to get L3 options given L0, L1, and L2
+export function getL3Options(l0Key: string, l1Key: string, l2Key: string): Record<string, string> {
+  const category = TAXONOMY[l0Key]?.children?.[l1Key]?.children?.[l2Key]
+  if (!category?.children) return {}
+  
+  const options: Record<string, string> = {}
+  for (const [key, subcategory] of Object.entries(category.children)) {
+    options[key] = subcategory.name
+  }
+  return options
 }

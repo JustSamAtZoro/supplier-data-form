@@ -1,21 +1,4 @@
-import { Attribute } from './taxonomy'
-
-export function shouldShowField(field: Attribute, formData: Record<string, any>): boolean {
-  if (!field.showIf) return true
-  
-  const { key, equals } = field.showIf
-  const value = formData[key]
-  
-  if (Array.isArray(equals)) {
-    return equals.includes(value)
-  }
-  
-  return value === equals
-}
-
-export function getVisibleFields(fields: Attribute[], formData: Record<string, any>): Attribute[] {
-  return fields.filter(field => shouldShowField(field, formData))
-}
+// Utility functions for the supplier form
 
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes'

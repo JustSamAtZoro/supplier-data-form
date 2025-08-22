@@ -5,9 +5,11 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-6">
           <div class="flex items-center">
-            <div class="h-10 w-32 bg-primary rounded flex items-center justify-center">
-              <span class="text-white font-bold">ZORO</span>
-            </div>
+            <img 
+              src="/Logo.png" 
+              alt="ZORO Tools" 
+              class="h-10 w-auto"
+            />
             <div class="ml-4">
               <h1 class="text-xl font-semibold text-primary">Supplier Product Data Form</h1>
               <p class="text-sm text-gray-600">Submit product information for merchandising review</p>
