@@ -1,41 +1,76 @@
 <template>
   <div class="form-card space-y-6">
     <div class="border-b border-grayLight pb-4">
-      <h3 class="text-lg font-semibold text-primary">Submission Overview</h3>
-      <p class="text-sm text-gray-600 mt-1">Review your category selection before uploading</p>
+      <h3 class="text-lg font-semibold text-primary">Upload Preparation</h3>
+      <p class="text-sm text-gray-600 mt-1">Select your product category to prepare for CSV upload</p>
     </div>
     
-    <!-- Selection Path Breadcrumb -->
+    <!-- Current Status -->
     <div class="space-y-3">
-      <h4 class="text-sm font-medium text-black">Selected Category Path:</h4>
-      <div v-if="hasAnySelection" class="bg-grayLight rounded-lg p-4">
-        <div class="space-y-2 text-sm">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-medium text-black">Status:</h4>
+        <div :class="statusBadgeClass" class="px-3 py-1 rounded-full text-sm font-medium">
+          {{ statusText }}
+        </div>
+      </div>
+      
+      <!-- Progress Bar -->
+      <div class="w-full bg-grayLight rounded-full h-3">
+        <div 
+          class="bg-primary h-3 rounded-full transition-all duration-500 ease-out"
+          :style="{ width: formStore.progressInfo.percentage + '%' }"
+        ></div>
+      </div>
+      
+      <div class="flex justify-between text-xs text-gray-600">
+        <span>{{ formStore.progressInfo.selected }} of {{ formStore.progressInfo.total }} levels selected</span>
+        <span>{{ formStore.progressInfo.percentage }}%</span>
+      </div>
+    </div>
+    
+    <!-- Category Path Visualization -->
+    <div class="space-y-3">
+      <h4 class="text-sm font-medium text-black">Category Path:</h4>
+      
+      <div v-if="hasAnySelection" class="space-y-2">
+        <!-- Level indicators -->
+        <div 
+          v-for="(level, index) in levelDisplay" 
+          :key="level.key"
+          class="flex items-center space-x-3"
+          :class="{ 'opacity-50': !level.selected }"
+        >
           <div class="flex items-center space-x-2">
-            <span class="text-xs bg-primary text-white px-2 py-1 rounded font-medium">L0</span>
-            <span :class="l0Class">
-              {{ l0Name || 'Not selected' }}
+            <span 
+              :class="level.badgeClass"
+              class="text-xs px-2 py-1 rounded font-medium min-w-[2rem] text-center"
+            >
+              {{ level.label }}
             </span>
+            <div class="flex-1">
+              <span v-if="level.selected" class="text-black font-medium">
+                {{ level.name }}
+              </span>
+              <span v-else class="text-gray-400 text-sm">
+                {{ level.placeholder }}
+              </span>
+            </div>
           </div>
           
-          <div v-if="formStore.formData.l0Category" class="flex items-center space-x-2 ml-4">
-            <span class="text-xs bg-secondary text-white px-2 py-1 rounded font-medium">L1</span>
-            <span :class="l1Class">
-              {{ l1Name || 'Not selected' }}
-            </span>
+          <!-- Connection arrow (except for last visible level) -->
+          <div 
+            v-if="index < visibleLevelCount - 1"
+            class="text-gray-300 text-xs"
+          >
+            ↓
           </div>
-          
-          <div v-if="formStore.formData.l1Category" class="flex items-center space-x-2 ml-8">
-            <span class="text-xs bg-accent text-white px-2 py-1 rounded font-medium">L2</span>
-            <span :class="l2Class">
-              {{ l2Name || 'Not selected' }}
-            </span>
-          </div>
-          
-          <div v-if="formStore.formData.l2Category" class="flex items-center space-x-2 ml-12">
-            <span class="text-xs bg-accentDark text-white px-2 py-1 rounded font-medium">L3</span>
-            <span :class="l3Class">
-              {{ l3Name || 'Not selected' }}
-            </span>
+        </div>
+        
+        <!-- Current step indicator -->
+        <div v-if="!formStore.isFormComplete" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="flex items-center space-x-2 text-blue-800">
+            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+            <span class="text-sm font-medium">{{ nextStepMessage }}</span>
           </div>
         </div>
       </div>
@@ -49,85 +84,56 @@
       </div>
     </div>
     
-    <!-- Upload Status -->
-    <div class="space-y-3">
-      <div class="flex items-center justify-between">
-        <h4 class="text-sm font-medium text-black">Upload Status:</h4>
-        <div :class="statusBadgeClass" class="px-3 py-1 rounded-full text-sm font-medium">
-          {{ statusText }}
-        </div>
-      </div>
-      
-      <!-- Progress Bar -->
-      <div class="w-full bg-grayLight rounded-full h-3">
-        <div 
-          class="bg-primary h-3 rounded-full transition-all duration-500 ease-out"
-          :style="{ width: progressPercentage + '%' }"
-        ></div>
-      </div>
-      
-      <div class="flex justify-between text-xs text-gray-600">
-        <span>{{ completedSteps }} of 4 steps completed</span>
-        <span>{{ progressPercentage }}%</span>
-      </div>
-    </div>
-    
-    <!-- Next Steps -->
-    <div class="space-y-3">
-      <h4 class="text-sm font-medium text-black">Next Steps:</h4>
-      <div class="space-y-2 text-sm">
-        <div v-if="!formStore.formData.l0Category" class="flex items-center space-x-2 text-gray-600">
-          <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-          <span>Select your primary category (L0)</span>
-        </div>
-        
-        <div v-else-if="!formStore.formData.l1Category" class="flex items-center space-x-2 text-gray-600">
-          <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-          <span>Choose an L1 subcategory</span>
-        </div>
-        
-        <div v-else-if="!formStore.formData.l2Category" class="flex items-center space-x-2 text-gray-600">
-          <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-          <span>Select an L2 subcategory</span>
-        </div>
-        
-        <div v-else-if="!formStore.formData.l3Category" class="flex items-center space-x-2 text-gray-600">
-          <div class="w-2 h-2 rounded-full bg-gray-300"></div>
-          <span>Choose your end node (L3)</span>
-        </div>
-        
-        <div v-else class="flex items-center space-x-2 text-green-600">
-          <div class="w-2 h-2 rounded-full bg-green-500"></div>
-          <span class="font-medium">Ready to upload your CSV file!</span>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Data Summary (when complete) -->
+    <!-- Upload Ready Summary -->
     <div v-if="formStore.isFormComplete" class="border-t border-grayLight pt-4 space-y-3">
-      <h4 class="text-sm font-medium text-black">Selection Summary:</h4>
+      <h4 class="text-sm font-medium text-black">Ready for Upload:</h4>
       <div class="bg-green-50 border border-green-200 rounded-lg p-3">
         <div class="text-sm text-green-800">
-          <p class="font-medium mb-2">Category Path:</p>
-          <p class="text-xs font-mono bg-white px-2 py-1 rounded border">
+          <p class="font-medium mb-2">Selected Category Path:</p>
+          <p class="text-xs font-mono bg-white px-2 py-1 rounded border break-all">
             {{ fullCategoryPath }}
           </p>
           
-          <p class="font-medium mt-3 mb-1">Upload Type:</p>
-          <p class="text-xs">
-            {{ uploadTypeDescription }}
-          </p>
+          <div class="mt-3 text-xs">
+            <p class="mb-1">✅ Category classification complete</p>
+            <p class="mb-1">📁 Ready to accept CSV uploads</p>
+            <p>🎯 Products will be classified under this category</p>
+          </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- Taxonomy Statistics -->
+    <div class="border-t border-grayLight pt-4 space-y-3">
+      <h4 class="text-sm font-medium text-black">System Information:</h4>
+      <div v-if="formStore.isLoading" class="text-xs text-gray-600">
+        <div class="flex items-center space-x-2">
+          <svg class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Loading taxonomy data...</span>
+        </div>
+      </div>
+      <div v-else-if="formStore.initError" class="text-xs text-red-600">
+        <p>• Error loading taxonomy system</p>
+        <p>• Please refresh the page to retry</p>
+      </div>
+      <div v-else class="text-xs text-gray-600 space-y-1">
+        <p>• {{ Object.keys(formStore.l0Options).length }} primary categories loaded</p>
+        <p>• Variable depth: 2-6 levels supported</p>
+        <p>• 5,700+ product classifications</p>
+        <p>• Progressive disclosure interface</p>
       </div>
     </div>
     
     <!-- Help Text -->
     <div class="text-xs text-gray-500 border-t border-grayLight pt-4">
       <p class="mb-1">
-        <strong>Note:</strong> This form is for product category classification only.
+        <strong>How it works:</strong> Select your product category to classify the type of products you're uploading.
       </p>
       <p>
-        Complete all 4 levels to enable CSV upload functionality.
+        Once complete, you can upload a CSV file containing your product data for that category.
       </p>
     </div>
   </div>
@@ -140,72 +146,95 @@ import { useFormStore } from '../stores/form'
 const formStore = useFormStore()
 
 const hasAnySelection = computed(() => {
-  return !!formStore.formData.l0Category
-})
-
-const completedSteps = computed(() => {
-  let count = 0
-  if (formStore.formData.l0Category) count++
-  if (formStore.formData.l1Category) count++
-  if (formStore.formData.l2Category) count++
-  if (formStore.formData.l3Category) count++
-  return count
-})
-
-const progressPercentage = computed(() => {
-  return Math.round((completedSteps.value / 4) * 100)
+  return !!formStore.formData.l0
 })
 
 const statusText = computed(() => {
-  if (completedSteps.value === 0) return 'Not Started'
-  if (completedSteps.value === 4) return 'Ready to Upload'
-  return `${completedSteps.value}/4 Selected`
+  if (formStore.progressInfo.selected === 0) return 'Select Category'
+  if (formStore.progressInfo.isComplete) return 'Ready to Upload'
+  return `${formStore.progressInfo.selected}/${formStore.progressInfo.total} Selected`
 })
 
 const statusBadgeClass = computed(() => {
-  if (completedSteps.value === 0) return 'bg-gray-100 text-gray-700'
-  if (completedSteps.value === 4) return 'bg-green-100 text-green-800'
+  if (formStore.progressInfo.selected === 0) return 'bg-gray-100 text-gray-700'
+  if (formStore.progressInfo.isComplete) return 'bg-green-100 text-green-800'
   return 'bg-yellow-100 text-yellow-800'
 })
 
-// Category names
-const l0Name = computed(() => {
-  return formStore.l0Options[formStore.formData.l0Category] || null
+const levelDisplay = computed(() => {
+  const levels = [
+    { 
+      key: 'l0', 
+      label: 'L0', 
+      selected: !!formStore.formData.l0, 
+      name: getDisplayName(formStore.l0Options, formStore.formData.l0),
+      placeholder: 'Select primary category',
+      badgeClass: 'bg-primary text-white'
+    },
+    { 
+      key: 'l1', 
+      label: 'L1', 
+      selected: !!formStore.formData.l1, 
+      name: getDisplayName(formStore.l1Options, formStore.formData.l1),
+      placeholder: 'Select L1 subcategory',
+      badgeClass: 'bg-secondary text-white'
+    },
+    { 
+      key: 'l2', 
+      label: 'L2', 
+      selected: !!formStore.formData.l2, 
+      name: getDisplayName(formStore.l2Options, formStore.formData.l2),
+      placeholder: 'Select L2 subcategory',
+      badgeClass: 'bg-accent text-white'
+    },
+    { 
+      key: 'l3', 
+      label: 'L3', 
+      selected: !!formStore.formData.l3, 
+      name: getDisplayName(formStore.l3Options, formStore.formData.l3),
+      placeholder: 'Select L3 subcategory',
+      badgeClass: 'bg-accentDark text-white'
+    },
+    { 
+      key: 'l4', 
+      label: 'L4', 
+      selected: !!formStore.formData.l4, 
+      name: getDisplayName(formStore.l4Options, formStore.formData.l4),
+      placeholder: 'Select L4 subcategory',
+      badgeClass: 'bg-gray-600 text-white'
+    },
+    { 
+      key: 'l5', 
+      label: 'L5', 
+      selected: !!formStore.formData.l5, 
+      name: getDisplayName(formStore.l5Options, formStore.formData.l5),
+      placeholder: 'Select L5 subcategory',
+      badgeClass: 'bg-gray-800 text-white'
+    }
+  ]
+  
+  // Only show levels up to the maximum depth for current path
+  return levels.slice(0, formStore.maxDepth)
 })
 
-const l1Name = computed(() => {
-  return formStore.l1Options[formStore.formData.l1Category] || null
+const visibleLevelCount = computed(() => {
+  return levelDisplay.value.length
 })
 
-const l2Name = computed(() => {
-  return formStore.l2Options[formStore.formData.l2Category] || null
+const nextStepMessage = computed(() => {
+  const currentLevel = formStore.progressInfo.selected
+  if (currentLevel === 0) return 'Select your primary category to begin'
+  if (currentLevel < formStore.progressInfo.total) {
+    return `Select L${currentLevel} subcategory to continue`
+  }
+  return 'Ready to upload your CSV file!'
 })
-
-const l3Name = computed(() => {
-  return formStore.l3Options[formStore.formData.l3Category] || null
-})
-
-// Styling for category names
-const l0Class = computed(() => formStore.formData.l0Category ? 'text-black font-medium' : 'text-gray-400')
-const l1Class = computed(() => formStore.formData.l1Category ? 'text-black font-medium' : 'text-gray-400')
-const l2Class = computed(() => formStore.formData.l2Category ? 'text-black font-medium' : 'text-gray-400')
-const l3Class = computed(() => formStore.formData.l3Category ? 'text-black font-medium' : 'text-gray-400')
 
 const fullCategoryPath = computed(() => {
-  const parts = []
-  if (l0Name.value) parts.push(l0Name.value)
-  if (l1Name.value) parts.push(l1Name.value)
-  if (l2Name.value) parts.push(l2Name.value)
-  if (l3Name.value) parts.push(l3Name.value)
-  return parts.join(' → ')
+  return formStore.breadcrumbPath.join(' → ')
 })
 
-const uploadTypeDescription = computed(() => {
-  if (formStore.formData.l3Category === 'successful-upload') {
-    return 'This selection will simulate a successful CSV upload process.'
-  } else if (formStore.formData.l3Category === 'failed-upload') {
-    return 'This selection will simulate a failed CSV upload process for testing.'
-  }
-  return 'Unknown upload type'
-})
+function getDisplayName(options: Record<string, string>, code: string): string {
+  return options[code] || code
+}
 </script>

@@ -1,177 +1,104 @@
-// Simplified taxonomy structure for cascading dropdowns
-export type CategoryLevel = {
-  name: string
-  children?: Record<string, CategoryLevel>
+// Real taxonomy system powered by CSV data
+import { 
+  initializeTaxonomy,
+  getL0Options,
+  getOptionsAtPath,
+  hasChildren,
+  getDisplayName,
+  getFullDisplayPath,
+  isCompleteSelection
+} from './csvParser'
+
+// Track initialization state
+let isInitialized = false
+
+// Initialize taxonomy asynchronously
+export const ensureTaxonomyInitialized = async (): Promise<void> => {
+  if (!isInitialized) {
+    await initializeTaxonomy()
+    isInitialized = true
+  }
 }
 
-export type Taxonomy = Record<string, CategoryLevel>
+// Export the main taxonomy functions with simplified names
+export const getTaxonomyL0Options = getL0Options
+export const getTaxonomyOptionsAtPath = getOptionsAtPath
+export const taxonomyHasChildren = hasChildren
+export const getTaxonomyDisplayName = getDisplayName
+export const getTaxonomyFullPath = getFullDisplayPath
+export const isTaxonomyComplete = isCompleteSelection
 
-// Mock taxonomy data with L0 -> L1 -> L2 -> L3 hierarchy
-export const TAXONOMY: Taxonomy = {
-  // L0 Categories (Primary High-Level Categories)
-  safety: {
-    name: 'Safety & Protection',
-    children: {
-      // L1 Subcategories
-      ppe: {
-        name: 'Personal Protective Equipment',
-        children: {
-          // L2 Subcategories
-          head: {
-            name: 'Head Protection',
-            children: {
-              // L3 End Nodes
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          },
-          eye: {
-            name: 'Eye Protection',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          },
-          hand: {
-            name: 'Hand Protection',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          }
-        }
-      },
-      emergency: {
-        name: 'Emergency Equipment',
-        children: {
-          'fire-safety': {
-            name: 'Fire Safety',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          },
-          'first-aid': {
-            name: 'First Aid',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          }
-        }
-      }
-    }
-  },
-  tools: {
-    name: 'Tools & Equipment',
-    children: {
-      'hand-tools': {
-        name: 'Hand Tools',
-        children: {
-          cutting: {
-            name: 'Cutting Tools',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          },
-          measuring: {
-            name: 'Measuring Tools',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          }
-        }
-      },
-      'power-tools': {
-        name: 'Power Tools',
-        children: {
-          drilling: {
-            name: 'Drilling & Driving',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          },
-          cutting: {
-            name: 'Cutting & Grinding',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          }
-        }
-      }
-    }
-  },
-  maintenance: {
-    name: 'Maintenance & Cleaning',
-    children: {
-      janitorial: {
-        name: 'Janitorial Supplies',
-        children: {
-          chemicals: {
-            name: 'Cleaning Chemicals',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          },
-          equipment: {
-            name: 'Cleaning Equipment',
-            children: {
-              'successful-upload': { name: 'Successful Upload' },
-              'failed-upload': { name: 'Failed Upload' }
-            }
-          }
-        }
-      }
+// Helper functions for the form
+export function getNextLevelOptions(currentPath: string[]): Record<string, string> {
+  return getTaxonomyOptionsAtPath(currentPath)
+}
+
+export function canGoDeeper(currentPath: string[]): boolean {
+  return taxonomyHasChildren(currentPath)
+}
+
+export function isSelectionComplete(codes: string[]): boolean {
+  // Remove empty codes and check if the path is complete
+  const cleanCodes = codes.filter(code => code && code.trim())
+  return cleanCodes.length > 0 && isTaxonomyComplete(cleanCodes)
+}
+
+export function getBreadcrumbPath(codes: string[]): string[] {
+  const cleanCodes = codes.filter(code => code && code.trim())
+  return getTaxonomyFullPath(cleanCodes)
+}
+
+export function getMaxDepthForPath(codes: string[]): number {
+  // Calculate the maximum possible depth for this path
+  let depth = 0
+  let currentPath: string[] = []
+  
+  for (const code of codes) {
+    if (!code) break
+    currentPath.push(code)
+    depth++
+    
+    if (!canGoDeeper(currentPath)) {
+      break
     }
   }
-}
-
-// Helper function to get L0 options
-export function getL0Options(): Record<string, string> {
-  const options: Record<string, string> = {}
-  for (const [key, category] of Object.entries(TAXONOMY)) {
-    options[key] = category.name
-  }
-  return options
-}
-
-// Helper function to get L1 options given L0
-export function getL1Options(l0Key: string): Record<string, string> {
-  const category = TAXONOMY[l0Key]
-  if (!category?.children) return {}
   
-  const options: Record<string, string> = {}
-  for (const [key, subcategory] of Object.entries(category.children)) {
-    options[key] = subcategory.name
+  // Check if we can go one level deeper
+  if (canGoDeeper(currentPath)) {
+    depth++
   }
-  return options
+  
+  return Math.min(depth, 6) // Cap at 6 levels (L0-L5)
 }
 
-// Helper function to get L2 options given L0 and L1
-export function getL2Options(l0Key: string, l1Key: string): Record<string, string> {
-  const category = TAXONOMY[l0Key]?.children?.[l1Key]
-  if (!category?.children) return {}
-  
-  const options: Record<string, string> = {}
-  for (const [key, subcategory] of Object.entries(category.children)) {
-    options[key] = subcategory.name
-  }
-  return options
+// Type definitions for the form
+export interface TaxonomySelection {
+  l0?: string
+  l1?: string
+  l2?: string
+  l3?: string
+  l4?: string
+  l5?: string
 }
 
-// Helper function to get L3 options given L0, L1, and L2
-export function getL3Options(l0Key: string, l1Key: string, l2Key: string): Record<string, string> {
-  const category = TAXONOMY[l0Key]?.children?.[l1Key]?.children?.[l2Key]
-  if (!category?.children) return {}
-  
-  const options: Record<string, string> = {}
-  for (const [key, subcategory] of Object.entries(category.children)) {
-    options[key] = subcategory.name
+export function getSelectionArray(selection: TaxonomySelection): string[] {
+  return [
+    selection.l0 || '',
+    selection.l1 || '',
+    selection.l2 || '',
+    selection.l3 || '',
+    selection.l4 || '',
+    selection.l5 || ''
+  ]
+}
+
+export function arrayToSelection(codes: string[]): TaxonomySelection {
+  return {
+    l0: codes[0] || '',
+    l1: codes[1] || '',
+    l2: codes[2] || '',
+    l3: codes[3] || '',
+    l4: codes[4] || '',
+    l5: codes[5] || ''
   }
-  return options
 }
